@@ -35,6 +35,7 @@ class AppStateKeys {
   static const aiModel = 'ai_model';
   static const aiApiKey = 'ai_api_key';
   static const updateManifestUrl = 'update_manifest_url';
+  static const lastUpdateCheckAt = 'last_update_check_at';
 }
 
 /// 高级配置默认值（与 L2 BuildConfig 默认一致）。

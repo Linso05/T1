@@ -109,14 +109,15 @@ class CourtTaskStore {
   Future<List<CourtTask>> updateTasks(
       List<CourtTask> Function(List<CourtTask>) transform) {
     return _lock.synchronized(() async {
-      final current = [...await _ensureCache()];
-      final normalized = transform(current)
+      final previous = await _ensureCache();
+      final normalized = transform([...previous])
           .map((t) => t.normalizedMeta())
           .where((t) => !t.isGenericReviewNotice())
           .toList()
           .distinctById()
           .sortedForDisplay();
-      await _db.replaceTasks(normalized);
+      // 只写变更行、删除被移除行，避免每次单条操作全表重写。
+      await _db.syncTasks(previous, normalized);
       _cache = normalized;
       return normalized;
     });

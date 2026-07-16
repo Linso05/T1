@@ -20,7 +20,7 @@ import '../ios_widgets.dart' show IosDisplayDensity, iosDensityProvider;
 import '../legal_dialogs.dart';
 import '../ui_enums.dart';
 
-const String kAppDisplayVersion = '2.4.2';
+const String kAppDisplayVersion = '2.4.4';
 
 /// 设置（mockup「设置」屏）。
 class SettingsPage extends ConsumerStatefulWidget {

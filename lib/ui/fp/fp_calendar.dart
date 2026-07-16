@@ -44,6 +44,9 @@ class FpMonthCalendar extends StatefulWidget {
     required this.selected,
     required this.dotsByDay,
     required this.onSelect,
+    this.onPrevMonth,
+    this.onNextMonth,
+    this.onToday,
     this.actions = const [],
   });
 
@@ -53,6 +56,9 @@ class FpMonthCalendar extends StatefulWidget {
   final DateTime selected;
   final Map<DateTime, List<FpDot>> dotsByDay;
   final ValueChanged<DateTime> onSelect;
+  final VoidCallback? onPrevMonth; // 上一月
+  final VoidCallback? onNextMonth; // 下一月
+  final VoidCallback? onToday; // 回到今天（非空时显示「今天」按钮）
   final List<Widget> actions;
 
   @override
@@ -96,6 +102,11 @@ class _FpMonthCalendarState extends State<FpMonthCalendar> {
                   ),
                 ),
                 const Spacer(),
+                if (widget.onToday != null) _todayBtn(widget.onToday!),
+                if (widget.onPrevMonth != null)
+                  _navBtn(FpIcons.chevronLeft, widget.onPrevMonth!),
+                if (widget.onNextMonth != null)
+                  _navBtn(FpIcons.chevronRight, widget.onNextMonth!),
                 ...widget.actions,
               ],
             ),
@@ -156,6 +167,45 @@ class _FpMonthCalendarState extends State<FpMonthCalendar> {
       ),
     );
   }
+
+  Widget _navBtn(IconData icon, VoidCallback onTap) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+          child: Icon(icon, size: 19, color: FpColors.ink2),
+        ),
+      );
+
+  Widget _todayBtn(VoidCallback onTap) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: Container(
+          margin: const EdgeInsets.only(right: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+          decoration: BoxDecoration(
+            color: FpColors.blueTint,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Text(
+            '今天',
+            style: TextStyle(
+              inherit: false,
+              fontFamily: 'CupertinoSystemText',
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: FpColors.blue,
+              decoration: TextDecoration.none,
+            ),
+          ),
+        ),
+      );
 
   Widget _fullGrid() {
     final rows = <Widget>[];

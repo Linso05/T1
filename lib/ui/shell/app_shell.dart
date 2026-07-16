@@ -2,9 +2,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/app_state_store.dart';
 import '../../models/court_enums.dart';
 import '../../platform/aliyun_update.dart';
 import '../../state/app_nav.dart';
+import '../../state/app_services.dart';
 import '../../state/court_tasks_controller.dart';
 import '../ai/ai_page.dart';
 import '../delivery/delivery_page.dart';
@@ -41,9 +43,25 @@ class _AppShellState extends ConsumerState<AppShell>
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(courtTasksProvider.notifier).refresh();
-      // 启动即检测更新：有新版本会自动弹窗（结果忽略）。
-      AliyunUpdate.checkForResult();
+      _maybeCheckUpdate();
     });
+  }
+
+  /// 冷启动更新检查节流：距上次检查不足 [_updateCheckThrottle] 就跳过，
+  /// 避免每次冷启都触发第三方更新 SDK（也降低其后台线程异常拖崩启动的概率）。
+  /// 手动「检查更新」不受此限制。
+  static const _updateCheckThrottle = Duration(hours: 6);
+
+  Future<void> _maybeCheckUpdate() async {
+    final appState = ref.read(appServicesProvider).appState;
+    final last = int.tryParse(
+            await appState.getString(AppStateKeys.lastUpdateCheckAt, '0')) ??
+        0;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (now - last < _updateCheckThrottle.inMilliseconds) return;
+    await appState.putString(AppStateKeys.lastUpdateCheckAt, '$now');
+    // 有新版本会自动弹窗（结果忽略）。
+    AliyunUpdate.checkForResult();
   }
 
   @override

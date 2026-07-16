@@ -38,7 +38,54 @@ class _WorkbenchPageState extends ConsumerState<WorkbenchPage> {
 
   AgendaRange _range = AgendaRange.day;
   DateTime? _selectedDay;
+  DateTime? _viewMonth; // 月历当前查看的月份（UTC 该月 1 号）；null=今天所在月
   final PageController _agendaPage = PageController();
+
+  /// 月历正在查看的月份（该月 1 号，UTC）。
+  DateTime _currentViewMonth() {
+    final today = chinaToday();
+    return _viewMonth ?? DateTime.utc(today.year, today.month, 1);
+  }
+
+  /// 切换到相邻月份：同时把选中日落到新月份里（本月→今天，否则→1 号），
+  /// 这样下方「当日事项」会跟着显示新月份的内容。
+  void _shiftMonth(int delta) {
+    final today = chinaToday();
+    final base = _currentViewMonth();
+    final next = DateTime.utc(base.year, base.month + delta, 1);
+    setState(() {
+      _viewMonth = next;
+      _selectedDay = (next.year == today.year && next.month == today.month)
+          ? today
+          : next;
+    });
+  }
+
+  /// 回到今天所在月并选中今天。
+  void _goToday() {
+    final today = chinaToday();
+    setState(() {
+      _viewMonth = DateTime.utc(today.year, today.month, 1);
+      _selectedDay = today;
+    });
+  }
+
+  /// 所有「月视图可见」的未归档/未失败任务，按日期分组（跨全部月份）。
+  Map<DateTime, List<CourtTask>> _monthByDay(List<CourtTask> tasks) {
+    final byDay = <DateTime, List<CourtTask>>{};
+    for (final t in tasks) {
+      if (t.status == CourtTaskStatus.archived ||
+          t.status == CourtTaskStatus.failed) {
+        continue;
+      }
+      if (!t.isVisibleInAgendaRange(AgendaRange.month)) continue;
+      byDay
+          .putIfAbsent(
+              chinaDateOnly(t.agendaMillis(AgendaRange.month)), () => [])
+          .add(t);
+    }
+    return byDay;
+  }
 
   @override
   void dispose() {
@@ -53,6 +100,17 @@ class _WorkbenchPageState extends ConsumerState<WorkbenchPage> {
           duration: const Duration(milliseconds: 280),
           curve: Curves.easeOutCubic);
     }
+  }
+
+  String _monthSubtitle(List<CourtTask> tasks) {
+    final today = chinaToday();
+    final vm = _currentViewMonth();
+    var n = 0;
+    _monthByDay(tasks).forEach((d, list) {
+      if (d.year == vm.year && d.month == vm.month) n += list.length;
+    });
+    final isCurrent = vm.year == today.year && vm.month == today.month;
+    return isCurrent ? '$n 件本月日程' : '${vm.year}年${vm.month}月 · $n 件日程';
   }
 
   List<CourtTask> _urgentFor(List<CourtTask> tasks, AgendaRange range) {
@@ -108,10 +166,9 @@ class _WorkbenchPageState extends ConsumerState<WorkbenchPage> {
     final tasks = ref.watch(courtTasksProvider.select((s) => s.tasks));
     final controller = ref.read(courtTasksProvider.notifier);
     final isMonth = _range == AgendaRange.month;
-    final agenda = tasks.agendaTasks(_range);
     final subtitle = isMonth
-        ? '${agenda.length} 件本月日程'
-        : '${_urgentFor(tasks, _range).length} 件紧急 · ${agenda.length} 件待办';
+        ? _monthSubtitle(tasks)
+        : '${_urgentFor(tasks, _range).length} 件紧急 · ${tasks.agendaTasks(_range).length} 件待办';
 
     return FpScreen(
       child: Column(
@@ -251,15 +308,10 @@ class _WorkbenchPageState extends ConsumerState<WorkbenchPage> {
 
   List<Widget> _calendarSlivers(List<CourtTask> tasks) {
     final today = chinaToday();
+    final viewMonth = _currentViewMonth();
     final selected = _selectedDay ?? today;
 
-    final monthTasks = tasks.agendaTasks(AgendaRange.month);
-    final byDay = <DateTime, List<CourtTask>>{};
-    for (final t in monthTasks) {
-      byDay
-          .putIfAbsent(chinaDateOnly(t.agendaMillis(AgendaRange.month)), () => [])
-          .add(t);
-    }
+    final byDay = _monthByDay(tasks);
     final dotsByDay = {
       for (final e in byDay.entries) e.key: e.value.map((t) => t.fpDot()).toList(),
     };
@@ -287,12 +339,24 @@ class _WorkbenchPageState extends ConsumerState<WorkbenchPage> {
         padding: const EdgeInsets.only(top: 10),
         sliver: SliverToBoxAdapter(
           child: FpMonthCalendar(
-            monthTitle: monthTitleLabel(),
-            gridDates: _grid(today),
+            monthTitle: '${viewMonth.year}年${viewMonth.month}月',
+            gridDates: _grid(viewMonth),
             today: today,
             selected: selected,
             dotsByDay: dotsByDay,
-            onSelect: (d) => setState(() => _selectedDay = d),
+            onPrevMonth: () => _shiftMonth(-1),
+            onNextMonth: () => _shiftMonth(1),
+            onToday: (viewMonth.year == today.year &&
+                    viewMonth.month == today.month)
+                ? null
+                : _goToday,
+            onSelect: (d) => setState(() {
+              _selectedDay = d;
+              // 点到相邻月份的补位日期时，顺势切到那个月。
+              if (d.year != viewMonth.year || d.month != viewMonth.month) {
+                _viewMonth = DateTime.utc(d.year, d.month, 1);
+              }
+            }),
           ),
         ),
       ),

@@ -107,6 +107,39 @@ class T1Database {
     });
   }
 
+  /// 增量落盘：对比 [previous] 与 [next]，只写内容变化的行、删除被移除的行，
+  /// 避免单条操作（已读/归档/删除）每次都「清空全表 + 全量重插」。
+  Future<void> syncTasks(
+      List<CourtTask> previous, List<CourtTask> next) async {
+    final prevJson = <String, String>{
+      for (final t in previous) t.id: jsonEncode(t.toJson()),
+    };
+    final nextIds = <String>{for (final t in next) t.id};
+    await _db.transaction((txn) async {
+      for (final task in next) {
+        final encoded = jsonEncode(task.toJson());
+        if (prevJson[task.id] == encoded) continue; // 内容未变，跳过写盘
+        await txn.insert(
+          'tasks',
+          {
+            'id': task.id,
+            'json': encoded,
+            'status': task.status.code,
+            'category': task.category.code,
+            'sms_date_millis': task.smsDateMillis,
+            'updated_at': task.updatedAt,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      for (final id in prevJson.keys) {
+        if (!nextIds.contains(id)) {
+          await txn.delete('tasks', where: 'id=?', whereArgs: [id]);
+        }
+      }
+    });
+  }
+
   Future<void> upsertTask(CourtTask task) => _upsertTask(_db, task);
 
   Future<void> _upsertTask(DatabaseExecutor db, CourtTask task) async {
