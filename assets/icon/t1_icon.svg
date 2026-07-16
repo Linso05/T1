@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="108" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#172033"/>
+      <stop offset="1" stop-color="#28374F"/>
+    </linearGradient>
+  </defs>
+  <!-- 圆角方形底（预览用；Android 自适应图标由系统裁形） -->
+  <rect x="0" y="0" width="108" height="108" rx="24" fill="url(#bg)"/>
+  <!-- 文书主体 -->
+  <path fill="#FFFFFF" d="M43,27 H58 L69,38 V73 Q69,79 63,79 H43 Q37,79 37,73 V33 Q37,27 43,27 Z"/>
+  <!-- 折角 -->
+  <path fill="#CBD5E1" d="M58,27 L69,38 H58 Z"/>
+  <!-- 三行文字 -->
+  <path fill="#94A3B8" d="M45.8,46 H60.2 A1.8,1.8 0 0 1 60.2,49.6 H45.8 A1.8,1.8 0 0 1 45.8,46 Z"/>
+  <path fill="#94A3B8" d="M45.8,54 H62.2 A1.8,1.8 0 0 1 62.2,57.6 H45.8 A1.8,1.8 0 0 1 45.8,54 Z"/>
+  <path fill="#94A3B8" d="M45.8,62 H55.2 A1.8,1.8 0 0 1 55.2,65.6 H45.8 A1.8,1.8 0 0 1 45.8,62 Z"/>
+  <!-- 送达完成绿色徽标 + 勾 -->
+  <path fill="#22C55E" d="M55.5,71 a11.5,11.5 0 1 0 23,0 a11.5,11.5 0 1 0 -23,0 Z"/>
+  <path fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M62,71 l3.6,3.7 l7.6,-8.8"/>
+</svg>
